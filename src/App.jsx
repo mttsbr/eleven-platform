@@ -1,11 +1,4 @@
-
 import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectItem } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
 
 const initialPlayers = [
   { name: 'John Dame', position: 'GK', age: 22, nationality: 'ENG', value: '€3.5M' },
@@ -14,8 +7,30 @@ const initialPlayers = [
   { name: 'Ali Kamara', position: 'FW', age: 24, nationality: 'FRA', value: '€9M' }
 ];
 
-// [CONTINUA CON IL CODICE COMPLETO DELL'APP.jsx DEL DOCUMENTO UTENTE]
-
 export default function App() {
-  // codice dell'app...
-}
+  const [players, setPlayers] = useState(initialPlayers);
+  const [filter, setFilter] = useState('All');
+  const [shadowTeam, setShadowTeam] = useState([]);
+  const [reportPlayer, setReportPlayer] = useState(null);
+  const [reportNote, setReportNote] = useState('');
+  const [reports, setReports] = useState([]);
+
+  const handleDropToShadow = (player) => {
+    if (!shadowTeam.includes(player)) {
+      setShadowTeam([...shadowTeam, player]);
+    }
+  };
+
+  const handleCreateReport = () => {
+    if (reportPlayer && reportNote) {
+      setReports([...reports, {
+        player: reportPlayer,
+        note: reportNote,
+        author: 'John Doe'
+      }]);
+      setReportPlayer(null);
+      setReportNote('');
+    }
+  };
+
+  const filteredPlayers =
