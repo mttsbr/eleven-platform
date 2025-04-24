@@ -9,22 +9,7 @@ const FORMATIONS = {
 
 export default function RosterManagement() {
   const [players, setPlayers] = useState([
-    { name: 'Marco', surname: 'Rossi', position: 'GK', age: 27, nationality: 'ITA', value: '€2.5M' },
-    { name: 'Lucas', surname: 'Herrera', position: 'GK', age: 30, nationality: 'ARG', value: '€3.2M' },
-    { name: 'Andreas', surname: 'Möller', position: 'GK', age: 24, nationality: 'GER', value: '€2.8M' },
-    { name: 'Pierre', surname: 'Dupont', position: 'DL', age: 26, nationality: 'FRA', value: '€4.5M' },
-    { name: 'João', surname: 'Costa', position: 'DL', age: 23, nationality: 'POR', value: '€3.9M' },
-    { name: 'Emil', surname: 'Petrov', position: 'DL', age: 29, nationality: 'BUL', value: '€2.2M' },
-    { name: 'Victor', surname: 'Svensson', position: 'DL', age: 25, nationality: 'SWE', value: '€3.0M' },
-    { name: 'Leonardo', surname: 'Mancini', position: 'MC', age: 27, nationality: 'ITA', value: '€6.0M' },
-    { name: 'Daan', surname: 'van Dijk', position: 'MC', age: 25, nationality: 'NED', value: '€5.4M' },
-    { name: 'Rui', surname: 'Neves', position: 'MC', age: 30, nationality: 'POR', value: '€4.9M' },
-    { name: 'Sofiane', surname: 'Haddadi', position: 'MC', age: 23, nationality: 'ALG', value: '€3.7M' },
-    { name: 'Jacob', surname: 'Johansson', position: 'MC', age: 26, nationality: 'SWE', value: '€5.2M' },
-    { name: 'Thiago', surname: 'Santos', position: 'FW', age: 26, nationality: 'BRA', value: '€7.1M' },
-    { name: 'Jamal', surname: 'Okeke', position: 'FW', age: 22, nationality: 'NGA', value: '€6.5M' },
-    { name: 'Lorenzo', surname: 'Grimaldi', position: 'FW', age: 28, nationality: 'ITA', value: '€5.8M' },
-    { name: 'Miguel', surname: 'Alvarado', position: 'FW', age: 24, nationality: 'COL', value: '€4.6M' }
+    { number: '1', name: 'John', surname: 'Doe', position: 'GK', age: 27, nationality: 'ITA', value: '€2.5M' },
   ]);
 
   const [filter, setFilter] = useState('All');
@@ -32,7 +17,13 @@ export default function RosterManagement() {
   const [formation, setFormation] = useState('4-4-2');
   const [pitch, setPitch] = useState({ layout: {}, extra: [] });
   const [showModal, setShowModal] = useState(false);
-  const [newPlayer, setNewPlayer] = useState({ name: '', surname: '', position: 'GK', age: '', nationality: '', value: '€' });
+  const [isEditing, setIsEditing] = useState(false);
+const [editingIndex, setEditingIndex] = useState(null);
+  const [newPlayer, setNewPlayer] = useState({ name: '', surname: '', position: 'GK', age: '', nationality: '', value: '€', number: '' });
+
+  const isDuplicateNumber = players.some((p, i) => p.number === newPlayer.number && i !== editingIndex);
+  const isNumberInvalid = isDuplicateNumber || newPlayer.number.length > 2;
+  const isFormValid = newPlayer.name && newPlayer.surname && newPlayer.age && newPlayer.nationality && newPlayer.value.trim() !== '€' && !isNumberInvalid;
 
   const filteredPlayers = filter === 'All' ? players : players.filter(p => p.position === filter);
 
@@ -74,7 +65,13 @@ export default function RosterManagement() {
   };
 
   const isInShadowTeam = (player) => shadowTeam.some(p => p.name === player.name && p.surname === player.surname);
-
+  const openEditModal = (player, index) => {
+    setNewPlayer({ ...player });
+    setEditingIndex(index);
+    setIsEditing(true);
+    setShowModal(true);
+  };
+  
   const formatValue = (valueStr) => {
     const num = parseInt(valueStr.replace(/[^\d]/g, ''));
     if (isNaN(num)) return '€0';
@@ -85,14 +82,36 @@ export default function RosterManagement() {
 
   const handleCreatePlayer = () => {
     const formattedValue = formatValue(newPlayer.value);
-    setPlayers(prev => [...prev, { ...newPlayer, value: formattedValue }]);
+  
+    if (isEditing && editingIndex !== null) {
+      // aggiorna lista giocatori
+      const updatedPlayers = [...players];
+      updatedPlayers[editingIndex] = { ...newPlayer, value: formattedValue };
+      setPlayers(updatedPlayers);
+  
+      // aggiorna anche lo shadowTeam, se il giocatore è presente
+      const updatedShadowTeam = shadowTeam.map(p =>
+        p.name === players[editingIndex].name && p.surname === players[editingIndex].surname
+          ? { ...newPlayer, value: formattedValue }
+          : p
+      );
+      setShadowTeam(updatedShadowTeam);
+    } else {
+      setPlayers(prev => [...prev, { ...newPlayer, value: formattedValue }]);
+    }
+  
+    // reset e chiusura
     setShowModal(false);
-    setNewPlayer({ name: '', surname: '', position: 'GK', age: '', nationality: '', value: '€' });
+    setNewPlayer({ name: '', surname: '', position: 'GK', age: '', nationality: '', value: '€', number: '' });
+    setIsEditing(false);
+    setEditingIndex(null);
   };
+  
+  
+
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans relative">
-      <header className="flex justify-between items-center px-6 py-4 border-b bg-white">
+    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans relative">      <header className="flex justify-between items-center px-6 py-4 border-b bg-white">
         <div className="text-xl font-semibold">[LOGO] Football Suite</div>
         <div className="text-right">
           <div>John Doe</div>
@@ -108,7 +127,7 @@ export default function RosterManagement() {
         <a href="#">Messenger</a>
       </nav>
 
-      <div className="px-6 py-4 text-lg font-semibold border-b bg-white">ROSTER MANAGEMENT</div>
+      <div className="px-6 py-4 text-lg font-semibold border-b bg-white">👥 ROSTER MANAGEMENT</div>
 
       <div className="flex flex-col md:flex-row gap-6 px-6 py-6">
         <div className="flex-1 bg-white rounded-xl p-4 shadow relative z-0">
@@ -120,34 +139,59 @@ export default function RosterManagement() {
             <option value="MC">Midfielders</option>
             <option value="FW">Forwards</option>
           </select>
-          <button onClick={() => setShowModal(true)} className="mb-4 w-full bg-blue-100 border border-blue-500 text-blue-600 rounded p-2 text-sm">+ Add new player</button>
+          <div className="flex justify-between items-center mb-4">
+  <button
+    onClick={() => {
+      setNewPlayer({ name: '', surname: '', position: 'GK', age: '', nationality: '', value: '€', number: '' });
+      setIsEditing(false);
+      setEditingIndex(null);
+      setShowModal(true);
+    }}
+    className="bg-blue-100 border border-blue-500 text-blue-600 rounded p-2 text-sm w-full"
+  >
+    + Add new player
+  </button>
+</div>
 
           <table className="w-full border-collapse">
             <thead>
               <tr>
+                <th className="text-left py-2">No.</th>
                 <th className="text-left py-2">Name</th>
                 <th className="text-left py-2">Position</th>
                 <th className="text-left py-2">Age</th>
-                <th className="text-left py-2">Nationality</th>
+                <th className="text-left py-2">Country</th>
                 <th className="text-left py-2">Value</th>
-                <th className="text-left py-2">Action</th>
+                <th className="text-left py-2"></th>
+                <th className="text-left py-2"></th>
               </tr>
             </thead>
             <tbody>
               {filteredPlayers.map((player, index) => (
                 <tr key={index} className="border-t">
+                  <td className="py-2">{player.number || '-'}</td>
                   <td className="py-2">{player.name} {player.surname}</td>
                   <td className="py-2">{player.position}</td>
                   <td className="py-2">{player.age}</td>
                   <td className="py-2">{player.nationality}</td>
                   <td className="py-2">{player.value}</td>
                   <td className="py-2">
-                    {!isInShadowTeam(player) && (
-                      <button className="bg-blue-600 text-white px-3 py-1 rounded text-sm" onClick={() => addToShadow(player)}>
-                        + Add
-                      </button>
-                    )}
-                  </td>
+  {isInShadowTeam(player) ? null : (
+    <button className="bg-blue-600 text-white px-3 py-1 rounded text-sm" onClick={() => addToShadow(player)}>
+      + Add
+    </button>
+  )}
+</td>
+<td className="py-2">
+  <button
+    className="text-xs text-gray-400 hover:text-gray-700 transition duration-150"
+    title="Edit"
+    onClick={() => openEditModal(player, index)}
+  >
+    Edit
+  </button>
+</td>
+
                 </tr>
               ))}
             </tbody>
@@ -166,18 +210,33 @@ export default function RosterManagement() {
 
           <div className="flex flex-col items-center gap-4 p-4 bg-green-50 rounded border mb-4">
             {FORMATIONS[formation].map((line, idx) => (
-              <div key={idx} className="flex justify-center gap-2 w-full">
+              <div key={idx} className="flex justify-center gap-4 w-full py-4">
                 {line.map((role, i) => {
                   const player = pitch.layout[role]?.[i];
                   return (
-                    <div key={i} className="relative bg-gray-200 rounded-full text-sm text-center w-20 h-12 flex items-center justify-center">
-                      {player ? (
-                        <>
-                          {player.name.charAt(0)}. {player.surname} ({player.position})
-                          <button onClick={() => removeFromShadow(player)} className="absolute top-0 right-1 text-red-500 text-xs">x</button>
-                        </>
-                      ) : role}
-                    </div>
+                    <div key={i} className="flex flex-col items-center w-20">
+  <div className="relative w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium">
+    {player ? (
+      <>
+        <button
+          onClick={() => removeFromShadow(player)}
+          className="absolute top-0.5 right-1 text-red-500 text-xs"
+        >
+          x
+        </button>
+        {player.position}
+      </>
+    ) : (
+      role
+    )}
+  </div>
+  {player && (
+    <div className="text-xs text-center mt-1 leading-tight">
+      {player.name.charAt(0)}. {player.surname}
+    </div>
+  )}
+</div>
+
                   );
                 })}
               </div>
@@ -210,10 +269,43 @@ export default function RosterManagement() {
             </select>
             <input className="w-full border rounded p-2" placeholder="Age" value={newPlayer.age} onChange={(e) => setNewPlayer({...newPlayer, age: e.target.value})} />
             <input className="w-full border rounded p-2" placeholder="Nationality" value={newPlayer.nationality} onChange={(e) => setNewPlayer({...newPlayer, nationality: e.target.value})} />
-            <input className="w-full border rounded p-2" placeholder="Value" value={newPlayer.value} onChange={(e) => setNewPlayer({...newPlayer, value: e.target.value})} />
+            <div className="relative">
+  <input
+    className={`w-full border rounded p-2 pr-28 ${isNumberInvalid ? 'border-red-400 text-red-600' : ''}`}
+    placeholder="Shirt Number"
+    type="number"
+    value={newPlayer.number}
+    onChange={(e) => {
+      const val = e.target.value.slice(0, 2);
+      setNewPlayer({ ...newPlayer, number: val });
+    }}
+  />
+  {isDuplicateNumber && (
+    <div className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 text-xs font-medium">
+      Already taken
+    </div>
+  )}
+</div>
+
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 select-none pointer-events-none">€</span>
+              <input
+                type="text"
+                className="w-full border rounded p-2 pl-6"
+                placeholder="Value"
+                value={newPlayer.value.replace(/^€\s*/, '')}
+                onChange={(e) => setNewPlayer({ ...newPlayer, value: `€ ${e.target.value}` })}
+              />
+            </div>
             <div className="flex justify-end gap-2">
               <button className="text-gray-500" onClick={() => setShowModal(false)}>Cancel</button>
-              <button className="bg-blue-600 text-white px-4 py-1 rounded" onClick={handleCreatePlayer}>Confirm</button>
+              <button
+                className={`px-4 py-1 rounded ${isFormValid ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                disabled={!isFormValid}
+                onClick={handleCreatePlayer}
+              >
+                Confirm
+              </button>
             </div>
           </div>
         </div>
