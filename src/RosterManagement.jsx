@@ -1,10 +1,25 @@
-// [ELEVEN PLATFORM]
+// [OK ELEVEN PLATFORM]
 import React, { useState, useEffect } from 'react';
 
 const FORMATIONS = {
-  '4-4-2': [['GK'], ['DL', 'DL', 'DL', 'DL'], ['MC', 'MC', 'MC', 'MC'], ['FW', 'FW']],
-  '4-3-3': [['GK'], ['DL', 'DL', 'DL', 'DL'], ['MC', 'MC', 'MC'], ['FW', 'FW', 'FW']],
-  '3-5-2': [['GK'], ['DL', 'DL', 'DL'], ['MC', 'MC', 'MC', 'MC', 'MC'], ['FW', 'FW']]
+  '4-4-2': [['GK'], ['DF', 'DF', 'DF', 'DF'], ['MF', 'MF', 'MF', 'MF'], ['FW', 'FW']],
+  '4-3-3': [['GK'], ['DF', 'DF', 'DF', 'DF'], ['MF', 'MF', 'MF'], ['FW', 'FW', 'FW']],
+  '3-5-2': [['GK'], ['DF', 'DF', 'DF'], ['MF', 'MF', 'MF', 'MF', 'MF'], ['FW', 'FW']],
+  '5-4-1': [['GK'], ['DF', 'DF', 'DF', 'DF', 'DF'], ['MF', 'MF', 'MF', 'MF'], ['FW']],
+  '5-4-1': [['GK'], ['DF', 'DF', 'DF', 'DF', 'DF'], ['MF', 'MF', 'MF', 'MF'], ['FW']],
+  '5-3-2': [['GK'], ['DF', 'DF', 'DF', 'DF', 'DF'], ['MF', 'MF', 'MF'], ['FW', 'FW']],
+  '4-2-3-1': [['GK'], ['DF', 'DF', 'DF', 'DF'], ['DM', 'DM'], ['MF', 'MF', 'MF'], ['FW']],
+  '4-4-1-1': [['GK'], ['DF', 'DF', 'DF', 'DF'], ['MF', 'MF', 'MF', 'MF'], ['FW'], ['FW']],
+  '4-1-4-1': [['GK'], ['DF', 'DF', 'DF', 'DF'], ['DM'], ['MF', 'MF', 'MF', 'MF'], ['FW']],
+  '4-5-1': [['GK'], ['DF', 'DF', 'DF', 'DF'], ['MF', 'MF', 'MF', 'MF', 'MF'], ['FW']],
+  '4-2-2-2': [['GK'], ['DF', 'DF', 'DF', 'DF'], ['DM', 'DM'], ['MF', 'MF'], ['FW', 'FW']],
+  '4-1-2-1-2': [['GK'], ['DF', 'DF', 'DF', 'DF'], ['DM'], ['MF', 'MF'], ['MF'], ['FW', 'FW']],
+  '4-3-1-2': [['GK'], ['DF', 'DF', 'DF', 'DF'], ['MF', 'MF', 'MF'], ['MF'], ['FW', 'FW']],
+  '4-3-2-1': [['GK'], ['DF', 'DF', 'DF', 'DF'], ['MF', 'MF', 'MF'], ['MF', 'MF'], ['FW']],
+  '3-4-3': [['GK'], ['DF', 'DF', 'DF'], ['MF', 'MF', 'MF', 'MF'], ['FW', 'FW', 'FW']],
+  '3-4-2-1': [['GK'], ['DF', 'DF', 'DF'], ['MF', 'MF', 'MF', 'MF'], ['MF', 'MF'], ['FW']],
+  '3-4-1-2': [['GK'], ['DF', 'DF', 'DF'], ['MF', 'MF', 'MF', 'MF'], ['MF'], ['FW', 'FW']],
+  '3-5-1-1': [['GK'], ['DF', 'DF', 'DF'], ['MF', 'MF', 'MF', 'MF', 'MF'], ['FW'], ['FW']],
 };
 
 export default function RosterManagement() {
@@ -12,6 +27,8 @@ export default function RosterManagement() {
     { number: '1', name: 'John', surname: 'Doe', position: 'GK', age: 27, nationality: 'ITA', value: '€2.5M' },
   ]);
 
+  const [sortKey, setSortKey] = useState('number');
+  const [sortOrder, setSortOrder] = useState('asc');
   const [filter, setFilter] = useState('All');
   const [shadowTeam, setShadowTeam] = useState([]);
   const [formation, setFormation] = useState('4-4-2');
@@ -43,15 +60,29 @@ const [editingIndex, setEditingIndex] = useState(null);
       assignedCount[role] = 0;
     });
 
-    for (const p of shadowTeam) {
+    const alreadyPlaced = new Set();
+    const usedKeys = new Set();
+    
+    for (let i = 0; i < shadowTeam.length; i++) {
+      const p = shadowTeam[i];
       const pos = p.position;
+      const key = `${p.name}|${p.surname}|${p.position}`;
       if (layout[pos] && assignedCount[pos] < layout[pos].length) {
         layout[pos][assignedCount[pos]] = p;
         assignedCount[pos]++;
-      } else {
+        alreadyPlaced.add(key);
+        usedKeys.add(key);
+      }
+    }
+    
+    for (let i = 0; i < shadowTeam.length; i++) {
+      const p = shadowTeam[i];
+      const key = `${p.name}|${p.surname}|${p.position}`;
+      if (!alreadyPlaced.has(key)) {
         extra.push(p);
       }
     }
+    
 
     setPitch({ layout, extra });
   }, [shadowTeam, formation]);
@@ -60,10 +91,40 @@ const [editingIndex, setEditingIndex] = useState(null);
     setShadowTeam(prev => [...prev, player]);
   };
 
-  const removeFromShadow = (player) => {
-    setShadowTeam(prev => prev.filter(p => p.name !== player.name || p.surname !== player.surname));
-  };
 
+  const removeFromShadow = (playerToRemove) => {
+    const role = playerToRemove.position;
+    const layoutCopy = { ...pitch.layout };
+    const roleArray = [...(layoutCopy[role] || [])];
+
+    const indexToRemove = roleArray.findIndex(
+      p => p && p.name === playerToRemove.name && p.surname === playerToRemove.surname
+    );
+
+    if (indexToRemove === -1) {
+      setShadowTeam(prev => prev.filter(p => p.name !== playerToRemove.name || p.surname !== playerToRemove.surname));
+      return;
+    }
+
+    roleArray[indexToRemove] = null; // lascia buco
+
+    let updatedExtras = [...pitch.extra];
+    const overflowCandidateIndex = updatedExtras.findIndex(p => p.position === role);
+    if (overflowCandidateIndex !== -1) {
+      const candidate = updatedExtras[overflowCandidateIndex];
+      roleArray[indexToRemove] = candidate;
+      updatedExtras.splice(overflowCandidateIndex, 1);
+    }
+
+    const newLayout = { ...layoutCopy, [role]: roleArray };
+    const newShadow = Object.entries(newLayout).flatMap(([r, arr]) => arr.filter(Boolean));
+
+    setPitch({ layout: newLayout, extra: updatedExtras });
+    setShadowTeam(newShadow);
+  };      
+
+
+  
   const isInShadowTeam = (player) => shadowTeam.some(p => p.name === player.name && p.surname === player.surname);
   const openEditModal = (player, index) => {
     setNewPlayer({ ...player });
@@ -79,7 +140,12 @@ const [editingIndex, setEditingIndex] = useState(null);
     if (num >= 1000) return `€${Math.round(num / 1000)}k`;
     return `€${num}`;
   };
-
+  const deletePlayer = (index) => {
+    const playerToDelete = players[index];
+    setPlayers(prev => prev.filter((_, i) => i !== index));
+    setShadowTeam(prev => prev.filter(p => p.name !== playerToDelete.name || p.surname !== playerToDelete.surname));
+  };
+  
   const handleCreatePlayer = () => {
     const formattedValue = formatValue(newPlayer.value);
   
@@ -112,20 +178,22 @@ const [editingIndex, setEditingIndex] = useState(null);
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans relative">      <header className="flex justify-between items-center px-6 py-4 border-b bg-white">
-        <div className="text-xl font-semibold">[LOGO] Football Suite</div>
+        <div className="text-xl font-bold">eleven•</div>
         <div className="text-right">
           <div>John Doe</div>
           <div className="text-sm text-gray-500">AS Monaco</div>
         </div>
       </header>
 
-      <nav className="flex gap-4 px-6 py-3 border-b bg-gray-100">
-        <a href="#" className="text-blue-600 font-medium">Recruitment</a>
-        <a href="#">Analysis</a>
-        <a href="#">Distribution</a>
-        <a href="#">Transfers</a>
-        <a href="#">Messenger</a>
-      </nav>
+      <nav className="flex gap-4 px-6 py-3 border-b bg-gray-100 relative z-20">
+    <button href="#" className="hover:text-blue-600">Recruitment</button>
+    <button href="#" className="hover:text-blue-600">Analysis</button>
+  <button href="#" className="hover:text-blue-600">Distribution</button>
+  <button href="#" className="hover:text-blue-600">Transfers</button>
+  <button href="#" className="hover:text-blue-600">Messenger</button>
+</nav>
+
+
 
       <div className="px-6 py-4 text-lg font-semibold border-b bg-white">👥 ROSTER MANAGEMENT</div>
 
@@ -136,7 +204,8 @@ const [editingIndex, setEditingIndex] = useState(null);
             <option value="All">All</option>
             <option value="GK">Goalkeepers</option>
             <option value="DL">Defenders</option>
-            <option value="MC">Midfielders</option>
+            <option value="DM">Def. Midfielders</option>
+            <option value="MF">Midfielders</option>
             <option value="FW">Forwards</option>
           </select>
           <div className="flex justify-between items-center mb-4">
@@ -153,47 +222,117 @@ const [editingIndex, setEditingIndex] = useState(null);
   </button>
 </div>
 
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="text-left py-2">No.</th>
-                <th className="text-left py-2">Name</th>
-                <th className="text-left py-2">Position</th>
-                <th className="text-left py-2">Age</th>
-                <th className="text-left py-2">Country</th>
-                <th className="text-left py-2">Value</th>
-                <th className="text-left py-2"></th>
-                <th className="text-left py-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPlayers.map((player, index) => (
-                <tr key={index} className="border-t">
-                  <td className="py-2">{player.number || '-'}</td>
-                  <td className="py-2">{player.name} {player.surname}</td>
-                  <td className="py-2">{player.position}</td>
-                  <td className="py-2">{player.age}</td>
-                  <td className="py-2">{player.nationality}</td>
-                  <td className="py-2">{player.value}</td>
-                  <td className="py-2">
-  {isInShadowTeam(player) ? null : (
-    <button className="bg-blue-600 text-white px-3 py-1 rounded text-sm" onClick={() => addToShadow(player)}>
-      + Add
-    </button>
-  )}
-</td>
-<td className="py-2">
-  <button
-    className="text-xs text-gray-400 hover:text-gray-700 transition duration-150"
-    title="Edit"
-    onClick={() => openEditModal(player, index)}
-  >
-    Edit
-  </button>
-</td>
+<table className="w-full table-fixed border-collapse text-sm">
+          <thead>
+  <tr>
+    {[
+  { label: 'No.', key: 'number', className: 'w-[8%]' },
+  { label: 'Name', key: 'surname', className: 'w-[28%]' },
+  { label: 'Role', key: 'position', className: 'w-[12%]' },
+  { label: 'Age', key: 'age', className: 'w-[10%]' },
+  { label: 'Country', key: 'nationality', className: 'w-[18%]' },
+  { label: 'Value', key: 'value', className: 'w-[14%]' },
+].map(({ label, key, className }) => (
+      <th
+        key={key}
+        onClick={() => {
+          if (sortKey === key) {
+            setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+          } else {
+            setSortKey(key);
+            setSortOrder('asc');
+          }
+        }}
+        className={`text-left py-2 cursor-pointer select-none hover:underline ${className}`}
+      >
+        {label} {sortKey === key ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
+      </th>
+    ))}
+<th className="w-[6%]"></th>
+<th className="w-[6%]"></th>
+<th className="w-[6%]"></th>
+  </tr>
+</thead>
 
-                </tr>
-              ))}
+            <tbody>
+            {['GK', 'DF', 'DM', 'MF', 'FW'].map(role => {
+  const group = filteredPlayers
+    .filter(p => p.position === role)
+    .sort((a, b) => {
+      const aVal = a[sortKey] ?? '';
+      const bVal = b[sortKey] ?? '';
+
+      if (sortKey === 'value') {
+        const parseValue = v => parseInt(v.replace(/[^\d]/g, '')) || 0;
+        return sortOrder === 'asc'
+          ? parseValue(aVal) - parseValue(bVal)
+          : parseValue(bVal) - parseValue(aVal);
+      }
+
+      if (sortKey === 'age' || sortKey === 'number') {
+        return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+
+      return sortOrder === 'asc'
+        ? String(aVal).localeCompare(bVal)
+        : String(bVal).localeCompare(aVal);
+    });
+  if (group.length === 0) return null;
+
+  const roleLabels = {
+    GK: 'Goalkeepers',
+    DL: 'Defenders',
+    DM: 'Defensive Midfielders',
+    MF: 'Midfielders',
+    FW: 'Forwards',
+  };
+
+  return (
+    <React.Fragment key={role}>
+      <tr>
+        <td colSpan="9" className="pt-4 pb-2 font-semibold text-gray-600 text-sm uppercase">
+          {roleLabels[role]}
+        </td>
+      </tr>
+      {group.map((player, index) => (
+        <tr key={`${player.number}-${player.name}-${player.surname}`} className="border-t text-sm">
+          <td className="py-2">{player.number || '-'}</td>
+          <td className="py-2">{player.name} {player.surname}</td>
+          <td className="py-2">{player.position}</td>
+          <td className="py-2">{player.age}</td>
+          <td className="py-2">{player.nationality}</td>
+          <td className="py-2">{player.value}</td>
+          <td className="py-2">
+            {!isInShadowTeam(player) && (
+              <button className="bg-blue-600 text-white px-1.5 py-.5 rounded text-sm" onClick={() => addToShadow(player)}>
+                +
+              </button>
+            )}
+          </td>
+          <td className="py-2">
+            <button
+              className="text-xs text-gray-400 hover:text-gray-700 transition duration-150"
+              title="Edit"
+              onClick={() => openEditModal(player, players.findIndex(p => p.number === player.number))}
+            >
+              Edit
+            </button>
+          </td>
+          <td className="py-2">
+            <button
+              className="text-xs text-red-300 hover:text-red-600 transition duration-150"
+              title="Delete"
+              onClick={() => deletePlayer(players.findIndex(p => p.number === player.number))}
+            >
+              ×
+            </button>
+          </td>
+        </tr>
+      ))}
+    </React.Fragment>
+  );
+})}
+
             </tbody>
           </table>
         </div>
@@ -202,10 +341,30 @@ const [editingIndex, setEditingIndex] = useState(null);
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">Shadow Team</h3>
             <select value={formation} onChange={(e) => setFormation(e.target.value)} className="border rounded p-2">
-              <option value="4-4-2">4-4-2</option>
-              <option value="4-3-3">4-3-3</option>
-              <option value="3-5-2">3-5-2</option>
-            </select>
+            <optgroup label="Back 4">
+<option value="4-4-2">4-4-2</option>
+  <option value="4-3-3">4-3-3</option>
+  <option value="4-2-3-1">4-2-3-1</option>
+  <option value="4-4-1-1">4-4-1-1</option>
+  <option value="4-1-4-1">4-1-4-1</option>
+  <option value="4-5-1">4-5-1</option>
+  <option value="4-2-2-2">4-2-2-2</option>
+  <option value="4-1-2-1-2">4-1-2-1-2</option>
+  <option value="4-3-1-2">4-3-1-2</option>
+  <option value="4-3-2-1">4-3-2-1</option>
+  </optgroup>
+  <optgroup label="Back 3">
+<option value="3-5-2">3-5-2</option>
+  <option value="3-4-3">3-4-3</option>
+  <option value="3-4-2-1">3-4-2-1</option>
+  <option value="3-4-1-2">3-4-1-2</option>
+  <option value="3-5-1-1">3-5-1-1</option>
+  </optgroup>
+<optgroup label="Back 5">
+<option value="5-4-1">5-4-1</option>
+  <option value="5-3-2">5-3-2</option>
+  </optgroup>
+</select>
           </div>
 
           <div className="flex flex-col items-center gap-4 p-4 bg-green-50 rounded border mb-4">
@@ -215,7 +374,21 @@ const [editingIndex, setEditingIndex] = useState(null);
                   const player = pitch.layout[role]?.[i];
                   return (
                     <div key={i} className="flex flex-col items-center w-20">
-  <div className="relative w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium">
+<div
+  className={`relative w-14 h-14 rounded-full flex items-center justify-center text-sm font-medium ${
+    player
+      ? player.position === 'GK'
+        ? 'bg-gray-400'
+        : player.position === 'DF' || player.position === 'DM'
+        ? 'bg-red-100'
+        : player.position === 'MF'
+        ? 'bg-yellow-100'
+        : player.position === 'FW'
+        ? 'bg-green-100'
+        : 'bg-gray-200'
+      : 'bg-gray-200'
+  }`}
+>
     {player ? (
       <>
         <button
@@ -246,8 +419,11 @@ const [editingIndex, setEditingIndex] = useState(null);
           <div className="text-sm text-gray-600 mb-2 font-medium">Substitutes / Overflow</div>
           <ul className="list-disc pl-5">
             {pitch.extra.map((p, i) => (
-              <li key={i} className="flex justify-between items-center">
-                <span>{p.name} {p.surname} - {p.position}</span>
+              <li key={i} className="flex justify-between items-center text-sm">
+<span>
+  <span className="inline-block min-w-[24px]">{p.number}</span>
+  <span className="ml-2">{p.name} {p.surname}</span> - {p.position}
+</span>
                 <button onClick={() => removeFromShadow(p)} className="text-red-500 text-xs ml-2">x</button>
               </li>
             ))}
@@ -263,8 +439,9 @@ const [editingIndex, setEditingIndex] = useState(null);
             <input className="w-full border rounded p-2" placeholder="Surname" value={newPlayer.surname} onChange={(e) => setNewPlayer({...newPlayer, surname: e.target.value})} />
             <select className="w-full border rounded p-2" value={newPlayer.position} onChange={(e) => setNewPlayer({...newPlayer, position: e.target.value})}>
               <option value="GK">Goalkeeper</option>
-              <option value="DL">Defender</option>
-              <option value="MC">Midfielder</option>
+              <option value="DF">Defender</option>
+              <option value="DM">Def. Midfielder</option>
+              <option value="MF">Midfielder</option>
               <option value="FW">Forward</option>
             </select>
             <input className="w-full border rounded p-2" placeholder="Age" value={newPlayer.age} onChange={(e) => setNewPlayer({...newPlayer, age: e.target.value})} />
